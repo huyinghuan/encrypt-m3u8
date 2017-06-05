@@ -8,9 +8,10 @@ import (
 
 //Config 配置文件
 type Config struct {
-	Source  string
-	Encrypt string
-	Decrypt string
+	Source   string
+	Encrypt  string
+	Decrypt  string
+	Download string
 }
 
 //ReadConfig 读取配置文件

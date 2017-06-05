@@ -11,6 +11,26 @@ import (
 	"os"
 )
 
+func CBCEncryptStream(content []byte, aeskey string, iv []byte) ([]byte, error) {
+	key := []byte(aeskey)
+
+	// Create the AES cipher
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	content, err = utils.PKCS7Padding(content, block.BlockSize())
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, err
+	}
+	bm := cipher.NewCBCEncrypter(block, iv)
+	bm.CryptBlocks(content, content)
+	return content, nil
+}
+
 //CBCEncryptFile  aes-cbc-128 加密文件
 // source 源文件路径
 // dist  加密后输出文件路径
