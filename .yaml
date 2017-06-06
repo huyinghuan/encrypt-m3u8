@@ -2,3 +2,8 @@ source: /Users/hyh/Downloads/encrypt/source
 encrypt: /Users/hyh/Downloads/encrypt/encrypt
 decrypt: /Users/hyh/Downloads/encrypt/decrypt
 download: /Users/hyh/Downloads/encrypt/download/
+key: "0123456789123456"
+m3u8: /Users/hyh/Downloads/encrypt/download/%s.m3u8
+keyurl: http://172.28.209.248:8080/key
+tsurl: http://172.28.209.248:14422/
+finalurl: http://172.28.209.248:14422/%s.m3u8

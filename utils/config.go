@@ -12,11 +12,30 @@ type Config struct {
 	Encrypt  string
 	Decrypt  string
 	Download string
+	Key      string
+	M3u8     string
+	Keyurl   string
+	Tsurl    string
+	Finalurl string
+}
+
+type ResourceConfig struct {
+	Cdn string
 }
 
 //ReadConfig 读取配置文件
-func ReadConfig(source string) (config *Config, err error) {
-	configBytes, err := ioutil.ReadFile(source)
+func ReadConfig() (config *Config, err error) {
+	configBytes, err := ioutil.ReadFile("/Users/hyh/go-work/src/encry/.yaml")
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(configBytes, &config)
+	return config, err
+}
+
+//ReadConfig 读取配置文件
+func ReadResourceConfig() (config *ResourceConfig, err error) {
+	configBytes, err := ioutil.ReadFile("/Users/hyh/go-work/src/encry/resource.yaml")
 	if err != nil {
 		return nil, err
 	}
