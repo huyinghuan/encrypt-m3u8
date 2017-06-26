@@ -208,7 +208,6 @@ func DownloadM3U8(m3u8URL string) string {
 			}
 			newm3u8 = append(newm3u8, line)
 		}
-
 	}
 	//----------------------- 结束
 

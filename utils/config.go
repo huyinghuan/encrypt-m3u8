@@ -25,17 +25,17 @@ type ResourceConfig struct {
 
 //ReadConfig 读取配置文件
 func ReadConfig() (config *Config, err error) {
-	configBytes, err := ioutil.ReadFile("/Users/hyh/go-work/src/encry/.yaml")
+	configBytes, err := ioutil.ReadFile(".yaml")
 	if err != nil {
 		return nil, err
 	}
 	err = yaml.Unmarshal(configBytes, &config)
 	return config, err
-}
+}``
 
-//ReadConfig 读取配置文件
+//ReadResourceConfig 读取配置文件
 func ReadResourceConfig() (config *ResourceConfig, err error) {
-	configBytes, err := ioutil.ReadFile("/Users/hyh/go-work/src/encry/resource.yaml")
+	configBytes, err := ioutil.ReadFile(".yaml")
 	if err != nil {
 		return nil, err
 	}
