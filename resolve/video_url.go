@@ -45,6 +45,7 @@ func GetCDNURL(vedioID string, terminalType string, resolution string) (string, 
 		log.Fatalln(err)
 		return "", err
 	}
+
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Fatalf("Error: response status is %d", resp.StatusCode)
@@ -159,69 +160,8 @@ func downloadTSList(url string, list []string, config *utils.Config) {
 	fmt.Println(time.Now().Sub(startTime))
 }
 
-func DownloadM3U8(m3u8URL string) string {
-	config, _ := utils.ReadConfig()
-	resp, err := http.Get(m3u8URL)
-	if err != nil {
-		log.Fatalln(err)
-		return ""
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		log.Fatalf("Error: response status is %d", resp.StatusCode)
-		return ""
-	}
-	p, listType, err := m3u8.DecodeFrom(resp.Body, true)
-	if err != nil {
-		log.Fatalln(err)
-		return ""
-	}
-	directory := utils.GetDirname(m3u8URL) + "/"
-	//获取m3u8 里面的ts列表
-	//----------------------- 开始
-	var m3u8String string
-	switch listType {
-	case m3u8.MEDIA:
-		mediapl := p.(*m3u8.MediaPlaylist)
-		m3u8String = mediapl.String()
-	case m3u8.MASTER:
-		masterpl := p.(*m3u8.MasterPlaylist)
-		m3u8String = masterpl.String()
-	}
-
-	//生成新的m3u8
-	newm3u8 := []string{}
-	hasAppend := false
-
-	list := strings.Split(m3u8String, "\n")
-	//待下载列表
-	tsList := []string{}
-	for _, line := range list {
-		if strings.Index(line, ".ts") != -1 {
-			tsList = append(tsList, line)
-			newm3u8 = append(newm3u8, config.Tsurl+utils.GetURLFilename(line))
-		} else {
-			if strings.Index(line, "#EXTINF") != -1 && !hasAppend {
-				extXKey := fmt.Sprintf("#EXT-X-KEY:METHOD=AES-128,URI=\"%s\",IV=0x0000000000000000", config.Keyurl)
-				newm3u8 = append(newm3u8, extXKey)
-				hasAppend = true
-			}
-			newm3u8 = append(newm3u8, line)
-		}
-	}
-	//----------------------- 结束
-
-	//生成新的m3u8
-	newm3u8String := strings.Join(newm3u8, "\n")
-	randomFileName := utils.RandStringRunes(8)
-	go func() {
-		ioutil.WriteFile(fmt.Sprintf(config.M3u8, randomFileName), []byte(newm3u8String), 0644)
-	}()
-	go func() { downloadTSList(directory, tsList, config) }()
-	return fmt.Sprintf(config.Finalurl, randomFileName)
-}
-
-func GetEncryptURL(vedioID string, terminalType string, resolution string) (string, error) {
+//GetM3U8OriginSourceURL 获取 m3u8 原始地址
+func GetM3U8OriginSourceURL(vedioID string, terminalType string, resolution string) (string, error) {
 	var cdnURL string
 	var m3u8URL string
 	var err error
@@ -233,6 +173,44 @@ func GetEncryptURL(vedioID string, terminalType string, resolution string) (stri
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(m3u8URL)
-	return DownloadM3U8(m3u8URL), nil
+	return m3u8URL, nil
+}
+
+//GetM3U8OriginSource 获取m3u8原始内容
+func GetM3U8OriginSource(m3u8URL string) (string, error) {
+	resp, err := http.Get(m3u8URL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Error: response status is %d", resp.StatusCode)
+	}
+	p, listType, err := m3u8.DecodeFrom(resp.Body, true)
+	if err != nil {
+		return "", err
+	}
+	//----------------------- 开始
+	var m3u8String string
+	switch listType {
+	case m3u8.MEDIA:
+		mediapl := p.(*m3u8.MediaPlaylist)
+		m3u8String = mediapl.String()
+	case m3u8.MASTER:
+		masterpl := p.(*m3u8.MasterPlaylist)
+		m3u8String = masterpl.String()
+	}
+	return m3u8String, nil
+}
+
+//DownloadM3U8TSList 下载m3u8里面的ts文件
+func DownloadM3U8TSList(m3u8Content string) {
+	list := strings.Split(m3u8Content, "\n")
+	tsList := []string{}
+	for _, line := range list {
+		if strings.Index(line, ".ts") != -1 {
+			tsList = append(tsList, line)
+		}
+	}
+	log.Println(tsList)
 }

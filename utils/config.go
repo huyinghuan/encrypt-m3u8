@@ -8,37 +8,28 @@ import (
 
 //Config 配置文件
 type Config struct {
-	Source   string
-	Encrypt  string
-	Decrypt  string
-	Download string
-	Key      string
-	M3u8     string
-	Keyurl   string
-	Tsurl    string
-	Finalurl string
+	Originm3u8 string
+	Key        string
+	Keyurl     string
+	Cdn        string
+	M3u8rule   string
 }
 
-type ResourceConfig struct {
-	Cdn string
-}
+var config *Config
 
 //ReadConfig 读取配置文件
-func ReadConfig() (config *Config, err error) {
-	configBytes, err := ioutil.ReadFile(".yaml")
-	if err != nil {
-		return nil, err
-	}
-	err = yaml.Unmarshal(configBytes, &config)
-	return config, err
-}``
+func ReadConfig() *Config {
+	return config
+}
 
-//ReadResourceConfig 读取配置文件
-func ReadResourceConfig() (config *ResourceConfig, err error) {
-	configBytes, err := ioutil.ReadFile(".yaml")
-	if err != nil {
-		return nil, err
+func InitConfig() error {
+	if configBytes, err := ioutil.ReadFile(".yaml"); err != nil {
+		return err
+	} else {
+		err := yaml.Unmarshal(configBytes, &config)
+		if err != nil {
+			return err
+		}
 	}
-	err = yaml.Unmarshal(configBytes, &config)
-	return config, err
+	return nil
 }

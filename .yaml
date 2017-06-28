@@ -1,9 +1,6 @@
-source: /Users/hyh/Downloads/encrypt/source
-encrypt: /Users/hyh/Downloads/encrypt/encrypt
-decrypt: /Users/hyh/Downloads/encrypt/decrypt
-download: /Users/hyh/Downloads/encrypt/download/
+originm3u8: /Users/hyh/Downloads/encrypt/origin-m3u8/%s
 key: "0123456789123456"
-m3u8: /Users/hyh/Downloads/encrypt/download/%s.m3u8
 keyurl: http://172.28.209.248:8080/key
-tsurl: http://172.28.209.248:14422/
-finalurl: http://172.28.209.248:14422/%s.m3u8
+cdn: http://pcweb.api.mgtv.com/player/video?video_id=%s&type=%s
+#teminal-videoid-resolution
+m3u8rule: "%s-%s-%s.m3u8"
