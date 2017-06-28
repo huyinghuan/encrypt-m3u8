@@ -8,11 +8,14 @@ import (
 
 //Config 配置文件
 type Config struct {
-	Originm3u8 string
-	Key        string
-	Keyurl     string
-	Cdn        string
-	M3u8rule   string
+	Originm3u8   string
+	Origints     string
+	Key          string
+	Querykey     string
+	Keyurl       string
+	Cdn          string
+	M3u8rule     string
+	Encrypttsurl string
 }
 
 var config *Config

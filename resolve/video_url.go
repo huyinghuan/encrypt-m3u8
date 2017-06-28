@@ -2,16 +2,18 @@ package resolve
 
 import (
 	"encoding/json"
-	"encry/encrypt"
 	"encry/utils"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
-	"sync"
+
 	"time"
+
+	"encry/encrypt"
 
 	"github.com/grafov/m3u8"
 )
@@ -37,7 +39,7 @@ type ResponseBody struct {
 
 //GetCDNURL  根据videoid， 终端类型， 分辨率 获取cdn url列表
 func GetCDNURL(vedioID string, terminalType string, resolution string) (string, error) {
-	config, _ := utils.ReadResourceConfig()
+	config := utils.ReadConfig()
 	uri := fmt.Sprintf(config.Cdn, vedioID, terminalType)
 	resp, err := http.Get(uri)
 	if err != nil {
@@ -104,62 +106,6 @@ func GetM3U8URL(cdn string) (string, error) {
 	return responseBody.Info, nil
 }
 
-func download(fileURL string, config *utils.Config) {
-	dist := config.Download
-	filename := utils.GetURLFilename(fileURL)
-	key := config.Key
-	iv := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	if filename == "" {
-		fmt.Printf("文件名为空%s", fileURL)
-		return
-	}
-	response, e := http.Get(fileURL)
-	if e != nil {
-		fmt.Printf("下载 %s 失败!\n", fileURL)
-	}
-
-	defer response.Body.Close()
-
-	//open a file for writing
-	file, err := os.Create(dist + filename)
-	if err != nil {
-		fmt.Printf("创建下载文件失败%s", filename)
-	}
-	defer file.Close()
-	// Use io.Copy to just dump the response body to the file. This supports huge files
-	body, _ := ioutil.ReadAll(response.Body)
-	//加密
-	content, _ := encrypt.CBCEncryptStream(body, key, iv)
-	err = ioutil.WriteFile(file.Name(), content, 0644)
-	if err != nil {
-		fmt.Printf("写入文件 %s 失败!\n", fileURL)
-	}
-}
-
-func downloadTSList(url string, list []string, config *utils.Config) {
-	startTime := time.Now()
-	var wg sync.WaitGroup
-	wg.Add(len(list))
-	resourceURLChan := make(chan string, 20)
-	//开启10个并行
-	for i := 0; i < 10; i++ {
-		go func() {
-			for {
-				resourceURL := <-resourceURLChan
-				download(resourceURL, config)
-				wg.Done()
-			}
-
-		}()
-	}
-	for _, resource := range list {
-		resourceURLChan <- (url + resource)
-	}
-	wg.Wait()
-	fmt.Printf("总共下载ts文件 %d， 耗时:", len(list))
-	fmt.Println(time.Now().Sub(startTime))
-}
-
 //GetM3U8OriginSourceURL 获取 m3u8 原始地址
 func GetM3U8OriginSourceURL(vedioID string, terminalType string, resolution string) (string, error) {
 	var cdnURL string
@@ -188,6 +134,8 @@ func GetM3U8OriginSource(m3u8URL string) (string, error) {
 	}
 	p, listType, err := m3u8.DecodeFrom(resp.Body, true)
 	if err != nil {
+		b, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(b))
 		return "", err
 	}
 	//----------------------- 开始
@@ -203,14 +151,94 @@ func GetM3U8OriginSource(m3u8URL string) (string, error) {
 	return m3u8String, nil
 }
 
-//DownloadM3U8TSList 下载m3u8里面的ts文件
-func DownloadM3U8TSList(m3u8Content string) {
+var downloadTSListChan = make(chan string, 1000)
+
+//PrepareDownloadM3U8TSList 准备下载m3u8里面的ts文件
+func PrepareDownloadM3U8TSList(m3u8URL string, m3u8Content string) {
 	list := strings.Split(m3u8Content, "\n")
-	tsList := []string{}
 	for _, line := range list {
 		if strings.Index(line, ".ts") != -1 {
-			tsList = append(tsList, line)
+			downloadTSListChan <- m3u8URL + "/" + line
 		}
 	}
-	log.Println(tsList)
+}
+
+//下载文件
+func DownloadTsFileByURL(url string) {
+	response, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("下载 %s 失败!\n", url)
+	}
+	defer response.Body.Close()
+	filename := utils.GetURLFilename(url)
+	config := utils.ReadConfig()
+	//open a file for writing
+	file, err := os.Create(fmt.Sprintf(config.Origints, filename))
+	if err != nil {
+		fmt.Printf("创建下载文件失败%s", url)
+	}
+	defer file.Close()
+	// Use io.Copy to just dump the response body to the file. This supports huge files
+	body, _ := ioutil.ReadAll(response.Body)
+	if err := ioutil.WriteFile(file.Name(), body, 0644); err != nil {
+		fmt.Printf("写入文件 %s 失败!\n", url)
+	}
+}
+
+func StartDownloadTSService() {
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func() {
+			for {
+				beDownloadURL := <-downloadTSListChan
+				DownloadTsFileByURL(beDownloadURL)
+			}
+		}()
+	}
+}
+
+func SaveOriginM3U8File(GetM3U8OriginSource string, filename string) error {
+	config := utils.ReadConfig()
+	distFilePath := fmt.Sprintf(config.Originm3u8, filename)
+	file, err := os.Create(distFilePath)
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(file.Name(), []byte(GetM3U8OriginSource), 0644); err != nil {
+		fmt.Printf("写入文件 %s 失败!\n", distFilePath)
+		return err
+	}
+	return nil
+}
+
+func EncryptM3U8(originSource string) (string, error) {
+	config := utils.ReadConfig()
+	list := strings.Split(originSource, "\n")
+	newm3u8 := []string{}
+	hasAppend := false
+	//生成随机key用来加密流
+	key := utils.RandString(16)
+	encryptKey, err := encrypt.CFBEncryptString([]byte(config.Querykey), key)
+	fmt.Printf("生成加密秘钥:%s\n", key)
+	if err != nil {
+		return "", err
+	}
+	for _, line := range list {
+		if strings.Index(line, ".ts") != -1 {
+			filename := strings.Split(line, "?")[0]
+			//key,filename,time
+			query, err := encrypt.CFBEncryptString([]byte(config.Querykey), fmt.Sprintf("%s,%s,%v", key, filename, time.Now().Unix()))
+			if err != nil {
+				return "", err
+			}
+			newm3u8 = append(newm3u8, fmt.Sprintf(config.Encrypttsurl, query))
+		} else {
+			if strings.Index(line, "#EXTINF") != -1 && !hasAppend {
+				extXKey := fmt.Sprintf("#EXT-X-KEY:METHOD=AES-128,URI=\"%s\",IV=0x0000000000000000", fmt.Sprintf(config.Keyurl, encryptKey))
+				newm3u8 = append(newm3u8, extXKey)
+				hasAppend = true
+			}
+			newm3u8 = append(newm3u8, line)
+		}
+	}
+	return strings.Join(newm3u8, "\n"), nil
 }

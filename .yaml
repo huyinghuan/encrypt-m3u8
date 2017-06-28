@@ -1,6 +1,9 @@
 originm3u8: /Users/hyh/Downloads/encrypt/origin-m3u8/%s
+origints: /Users/hyh/Downloads/encrypt/origin-ts/%s
 key: "0123456789123456"
-keyurl: http://172.28.209.248:8080/key
+querykey: "0123456789123457"
+keyurl: http://172.28.211.164:8080/key?key=%s
 cdn: http://pcweb.api.mgtv.com/player/video?video_id=%s&type=%s
 #teminal-videoid-resolution
 m3u8rule: "%s-%s-%s.m3u8"
+encrypttsurl: "http://172.28.211.164:8080/encrypt.ts?f=%s"
