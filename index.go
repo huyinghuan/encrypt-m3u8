@@ -118,7 +118,6 @@ func server() {
 		ctx.Write(body)
 	})
 	app.Get("/all.m3u8", func(ctx context.Context) {
-		log.Println(ctx.Request().Header)
 		videoID := ctx.URLParam("videoid")
 		terminalType := ctx.URLParam("terminal")
 		resolution := ctx.URLParam("resolution")

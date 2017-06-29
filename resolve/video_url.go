@@ -219,7 +219,7 @@ func EncryptM3U8(originSource string, signatures string) (string, error) {
 	//生成随机key用来加密流
 	key := utils.RandString(16)
 	encryptKey, err := encrypt.CFBEncryptString([]byte(config.Querykey), key+";"+signatures)
-	fmt.Printf("生成加密秘钥:%s\n", key)
+	//fmt.Printf("生成加密秘钥:%s\n", key)
 	if err != nil {
 		return "", err
 	}
