@@ -224,12 +224,15 @@ func EncryptM3U8(originSource string, signatures string) (string, error) {
 	count := 0
 	firstHead := 4
 	encryptPrecent := 20
-	for _, line := range list {
-		if strings.Index(line, ".ts") == -1 {
-			newm3u8 = append(newm3u8, line)
+	length := len(list)
+	for i := 0; i < length; i++ {
+		if strings.Index(list[i], "#EXTINF") == -1 {
+			newm3u8 = append(newm3u8, list[i])
 			continue
 		}
+		extInf := list[i]
 		count = count + 1
+		line := list[i+1]
 		//不加密
 		key := ""
 		randomNum := random()
@@ -249,7 +252,9 @@ func EncryptM3U8(originSource string, signatures string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		newm3u8 = append(newm3u8, extInf)
 		newm3u8 = append(newm3u8, fmt.Sprintf(config.Encrypttsurl, query))
+		i = i + 1
 	}
 	return strings.Join(newm3u8, "\n"), nil
 }
