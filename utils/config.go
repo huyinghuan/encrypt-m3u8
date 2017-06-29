@@ -15,6 +15,7 @@ type Config struct {
 	Cdn          string
 	M3u8rule     string
 	Encrypttsurl string
+	Donotencrypt string
 }
 
 var config *Config

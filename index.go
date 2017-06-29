@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encry/controller"
 	"encry/resolve"
 	"encry/service"
 	"encry/utils"
 	"log"
 	"os"
-	"sync"
 
 	"fmt"
 
@@ -111,6 +111,10 @@ func server() {
 			ctx.StatusCode(iris.StatusServiceUnavailable)
 			return
 		}
+		if key == config.Donotencrypt {
+			ctx.Write(fileContent)
+			return
+		}
 		body, err := encrypt.CBCEncryptStream(fileContent, key, iv)
 		//fmt.Println("加密流密码：", key)
 		if err != nil {
@@ -118,44 +122,10 @@ func server() {
 			ctx.StatusCode(iris.StatusServiceUnavailable)
 			return
 		}
-		// func() {
-		// 	file, err := os.Create("/Users/hyh/Downloads/encrypt/encrypt/" + filename)
-		// 	if err != nil {
-		// 		fmt.Printf("创建下载文件失败%s", filename)
-		// 	}
-		// 	defer file.Close()
-		// 	if err = ioutil.WriteFile(file.Name(), body, 0644); err != nil {
-		// 		fmt.Println("写入文件失败")
-		// 	}
-
-		// }()
-		//ctx.Header("Content-Type", "video/mp2t")
 		ctx.Write(body)
 	})
-	app.Get("/decrypt", func(ctx context.Context) {
-		key := ctx.URLParam("key")
-		iv := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
-		sourceFiles, _ := ioutil.ReadDir("/Users/hyh/Downloads/encrypt/encrypt/")
-		var wg sync.WaitGroup
-		wg.Add(len(sourceFiles))
-		for _, file := range sourceFiles {
-			fileName := file.Name()
-			if strings.Index(fileName, ".ts") == -1 {
-				continue
-			}
-			sourceFile := "/Users/hyh/Downloads/encrypt/encrypt/" + fileName
-			distFile := "/Users/hyh/Downloads/encrypt/decrypt/" + fileName
-			go func(sourceFile string, distFile string) {
-				defer wg.Done()
-				err := encrypt.CBCDecryptFile(sourceFile, distFile, key, iv)
-				if err != nil {
-					fmt.Println(err)
-				}
-			}(sourceFile, distFile)
-		}
-		wg.Wait()
-	})
+	app.Get("/decrypt", controller.Decrypt)
+	app.Get("/decrypt-key", controller.DecryptKey)
 	app.Get("/all.m3u8", func(ctx context.Context) {
 		videoID := ctx.URLParam("videoid")
 		terminalType := ctx.URLParam("terminal")
