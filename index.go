@@ -53,6 +53,7 @@ func server() {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
+		//检测特征码
 		if signature := decryptContentArr[1]; signature != service.GetSignature(ctx.Request()) {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
@@ -88,7 +89,7 @@ func server() {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
-		//特征码有误
+		//检测特征码
 		if signature := keyArray[1]; signature != service.GetSignature(ctx.Request()) {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
@@ -102,6 +103,7 @@ func server() {
 			return
 		}
 		iv := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		//读取目标ts文件，并加密返回
 		fileContent, err := ioutil.ReadFile(distFilePath)
 		if err != nil {
 			log.Println(err)
@@ -127,7 +129,7 @@ func server() {
 			return
 		}
 		originSource := ""
-		//判断该m3u8是否已存在
+		//判断该m3u8是否已存在, 存在则读取源内容
 		if service.IsExistM3U8(terminalType, videoID, resolution) {
 			body, err := service.GetExistM3U8(terminalType, videoID, resolution)
 			if err != nil {
@@ -137,6 +139,7 @@ func server() {
 			}
 			originSource = string(body)
 		} else {
+			//不存在
 			//获取原始m3u8地址
 			originSourceURL, err := resolve.GetM3U8OriginSourceURL(videoID, terminalType, resolution)
 			if err != nil {
@@ -145,19 +148,20 @@ func server() {
 				return
 			}
 			originSourceDirURL := utils.GetDirname(originSourceURL)
+			//获取原始m3u8的内容
 			originSource, err = resolve.GetM3U8OriginSource(originSourceURL)
 			if err != nil {
 				ctx.StatusCode(500)
 				log.Println(err)
 				return
 			}
-			//放入数据通道
+			//放入数据通道，下载ts片段
 			go resolve.PrepareDownloadM3U8TSList(originSourceDirURL, originSource)
-			//写入文件
+			//将原始m3u8的内容写入文件，缓存以便二次使用
 			resolve.SaveOriginM3U8File(originSource, fmt.Sprintf(config.M3u8rule, terminalType, videoID, resolution))
 		}
 		//返回编码后的m3u8
-		//编码m3u8
+		//编码并加密m3u8
 		content, err := resolve.EncryptM3U8(originSource, service.GetSignature(ctx.Request()))
 		if err != nil {
 			ctx.StatusCode(500)
