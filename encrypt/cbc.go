@@ -22,9 +22,6 @@ func CBCEncryptStream(content []byte, aeskey string, iv []byte) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-	// if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-	// 	return nil, err
-	// }
 	bm := cipher.NewCBCEncrypter(block, iv)
 	bm.CryptBlocks(content, content)
 	return content, nil
@@ -49,9 +46,6 @@ func CBCEncryptFile(source string, dist string, aeskey string, iv []byte) error 
 	if err != nil {
 		return err
 	}
-	// if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-	// 	return err
-	// }
 	bm := cipher.NewCBCEncrypter(block, iv)
 	bm.CryptBlocks(plaintext, plaintext)
 	f, err := os.Create(dist)
