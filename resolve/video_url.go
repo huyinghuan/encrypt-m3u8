@@ -210,14 +210,15 @@ func SaveOriginM3U8File(GetM3U8OriginSource string, filename string) error {
 	return nil
 }
 
-func EncryptM3U8(originSource string) (string, error) {
+//EncryptM3U8 加密并生成新的m3u8
+func EncryptM3U8(originSource string, signatures string) (string, error) {
 	config := utils.ReadConfig()
 	list := strings.Split(originSource, "\n")
 	newm3u8 := []string{}
 	hasAppend := false
 	//生成随机key用来加密流
 	key := utils.RandString(16)
-	encryptKey, err := encrypt.CFBEncryptString([]byte(config.Querykey), key)
+	encryptKey, err := encrypt.CFBEncryptString([]byte(config.Querykey), key+";"+signatures)
 	fmt.Printf("生成加密秘钥:%s\n", key)
 	if err != nil {
 		return "", err
@@ -226,7 +227,7 @@ func EncryptM3U8(originSource string) (string, error) {
 		if strings.Index(line, ".ts") != -1 {
 			filename := strings.Split(line, "?")[0]
 			//key,filename,time
-			query, err := encrypt.CFBEncryptString([]byte(config.Querykey), fmt.Sprintf("%s,%s,%v", key, filename, time.Now().Unix()))
+			query, err := encrypt.CFBEncryptString([]byte(config.Querykey), fmt.Sprintf("%s,%s,%v", key+";"+signatures, filename, time.Now().Unix()))
 			if err != nil {
 				return "", err
 			}

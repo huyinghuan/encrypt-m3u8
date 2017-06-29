@@ -42,13 +42,22 @@ func server() {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
-		decryptKey, err := encrypt.CFBDecryptString([]byte(config.Querykey), key)
+		decryptContent, err := encrypt.CFBDecryptString([]byte(config.Querykey), key)
 		if err != nil {
 			log.Println(err)
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
-		ctx.WriteString(decryptKey)
+		decryptContentArr := []string{}
+		if decryptContentArr = strings.Split(decryptContent, ";"); len(decryptContentArr) != 2 {
+			ctx.StatusCode(iris.StatusNotAcceptable)
+			return
+		}
+		if signature := decryptContentArr[1]; signature != service.GetSignature(ctx.Request()) {
+			ctx.StatusCode(iris.StatusNotAcceptable)
+			return
+		}
+		ctx.WriteString(decryptContentArr[0])
 	})
 	app.Get("/encrypt.ts", func(ctx context.Context) {
 		f := ctx.URLParam("f")
@@ -56,19 +65,36 @@ func server() {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
-		querystring, err := encrypt.CFBDecryptString([]byte(config.Querykey), f)
-		if err != nil {
+		querystring := ""
+		decryptContentArr := []string{}
+
+		var err error
+		if querystring, err = encrypt.CFBDecryptString([]byte(config.Querykey), f); err != nil {
 			log.Println(err)
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
+		decryptContentArr = strings.Split(querystring, ",")
+
 		//key,time,filename
-		decryptContentArr := strings.Split(querystring, ",")
 		if len(decryptContentArr) != 3 {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
-		key := decryptContentArr[0]
+		//解密密钥
+		key := ""
+		keyArray := []string{}
+		if keyArray = strings.Split(decryptContentArr[0], ";"); len(keyArray) != 2 {
+			ctx.StatusCode(iris.StatusNotAcceptable)
+			return
+		}
+		//特征码有误
+		if signature := keyArray[1]; signature != service.GetSignature(ctx.Request()) {
+			ctx.StatusCode(iris.StatusNotAcceptable)
+			return
+		}
+		key = keyArray[0]
+
 		filename := decryptContentArr[1]
 		distFilePath := fmt.Sprintf(config.Origints, filename)
 		if _, err := os.Stat(distFilePath); err != nil {
@@ -92,6 +118,7 @@ func server() {
 		ctx.Write(body)
 	})
 	app.Get("/all.m3u8", func(ctx context.Context) {
+		log.Println(ctx.Request().Header)
 		videoID := ctx.URLParam("videoid")
 		terminalType := ctx.URLParam("terminal")
 		resolution := ctx.URLParam("resolution")
@@ -132,7 +159,7 @@ func server() {
 		}
 		//返回编码后的m3u8
 		//编码m3u8
-		content, err := resolve.EncryptM3U8(originSource)
+		content, err := resolve.EncryptM3U8(originSource, service.GetSignature(ctx.Request()))
 		if err != nil {
 			ctx.StatusCode(500)
 			log.Println(err)

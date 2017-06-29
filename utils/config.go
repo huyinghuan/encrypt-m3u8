@@ -10,7 +10,6 @@ import (
 type Config struct {
 	Originm3u8   string
 	Origints     string
-	Key          string
 	Querykey     string
 	Keyurl       string
 	Cdn          string
