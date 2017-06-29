@@ -54,7 +54,7 @@ func server() {
 			return
 		}
 		//检测特征码
-		if signature := decryptContentArr[1]; signature != service.GetSignature(ctx.Request()) {
+		if !service.MatchSignature(ctx.Request(), decryptContentArr[1]) {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
@@ -90,7 +90,7 @@ func server() {
 			return
 		}
 		//检测特征码
-		if signature := keyArray[1]; signature != service.GetSignature(ctx.Request()) {
+		if !service.MatchSignature(ctx.Request(), keyArray[1]) {
 			ctx.StatusCode(iris.StatusNotAcceptable)
 			return
 		}
